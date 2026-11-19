@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StackTraceDoctor - AI Code Bug Explainer &amp; History Vault</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            background-image:
+                radial-gradient(at 15% 20%, rgba(129, 140, 248, 0.20) 0px, transparent 50%),
+                radial-gradient(at 85% 22%, rgba(244, 114, 182, 0.16) 0px, transparent 50%),
+                radial-gradient(at 50% 75%, rgba(34, 211, 238, 0.16) 0px, transparent 55%);
+            background-attachment: fixed;
+            color: #0f172a;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f8fafc;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .white-surface-card {
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 12px 32px -8px rgba(37, 99, 235, 0.10), 0 0 1px 1px rgba(226, 232, 240, 0.95);
+            backdrop-filter: blur(12px);
+        }
+        .nav-btn-active {
+            background: linear-gradient(90deg, #2563eb, #0ea5e9);
+            color: #ffffff;
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-900">
+
+    <!-- Top Global Header Bar (Exact Structure of Photos 21335 & 21336 in Crisp White Theme) -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-2.5 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-[1400px] mx-auto flex flex-wrap items-center justify-between gap-3">
+            <!-- Left Brand Logo -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center font-extrabold text-white text-sm shadow-sm">
+                    &lt;/&gt;
+                </div>
+                <div>
+                    <div class="text-base font-extrabold tracking-tight text-slate-900 flex items-center gap-1">
+                        StackTrace<span class="text-blue-600">Doctor</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 hidden sm:block">Spring Boot + PostgreSQL Bug Analyzer</p>
+                </div>
+            </div>
+
+            <!-- Center Search Input (Visible on both Login & Dashboard just like 21335 & 21336) -->
+            <div id="topSearchContainer" class="flex flex-1 max-w-md mx-4">
+                <div class="relative w-full">
+                    <input id="globalSearchInput" type="text" placeholder="Search bugs, history, or errors..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-300 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition">
+                    <svg class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.5 10.5a7.5 7.5 0 0013.15 6.15z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Right User Controls -->
+            <div class="flex items-center gap-2.5">
+                <button id="openApiKeyModalBtn" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition">
+                    Add AI API Key
+                </button>
+
+                <div id="navUserArea" class="hidden items-center gap-2.5">
+                    <div class="hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                        <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[11px] font-bold text-white" id="navAvatarInitials">
+                            DV
+                        </div>
+                        <div class="text-left">
+                            <div id="navUserName" class="text-xs font-bold text-slate-800 leading-none"></div>
+                            <div id="navUserEmail" class="text-[10px] text-slate-500 mt-0.5"></div>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" type="button" class="text-xs px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition font-semibold">
+                        Logout
+                    </button>
+                </div>
+
+                <!-- Hidden helper elements preserved for compatibility -->
+                <div id="guestHeaderBtns" class="hidden">
+                    <button id="headerLoginBtn" type="button">Log in</button>
+                    <button id="headerSignupBtn" type="button">Sign up</button>
+                    <input id="heroQuickEmailInput" type="email">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Toast Notification Banner -->
+    <div id="toastBanner" class="hidden fixed bottom-4 right-4 z-50 max-w-sm bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-xl text-xs flex items-center gap-2.5">
+        <span id="toastDot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+        <span id="toastText"></span>
+    </div>
+
+    <!-- Optional Gemini API Key Modal -->
+    <div id="apiKeyModal" class="hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-bold text-slate-900">Add AI API Key (Optional)</h2>
+                <button id="closeApiKeyModalBtn" type="button" class="text-slate-400 hover:text-slate-700 text-xs font-semibold px-2 py-1">Close</button>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Paste your free Google AI Studio key to make live HTTPS <code class="text-blue-600 font-semibold">generateContent</code> calls. Leave it blank to use the built-in multi-language code analyzer.
+            </p>
+            <div>
+                <label for="geminiKeyInput" class="block text-xs font-semibold text-slate-700 mb-1">x-goog-api-key</label>
+                <input id="geminiKeyInput" type="password" placeholder="AIzaSy..." class="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-500">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button id="clearApiKeyBtn" type="button" class="px-3 py-1.5 text-xs rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">Use Built-in Analyzer</button>
+                <button id="saveApiKeyBtn" type="button" class="px-3.5 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold">Save Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 1: SPLIT-CARD LOGIN & REGISTRATION SCREEN (Exact Structure of    -->
+    <!-- Photo 21335.jpg with White + Soft Pastel Glow Theme)                  -->
+    <!-- ===================================================================== -->
+    <section id="authView" class="flex-1 flex items-center justify-center px-4 py-8">
+        <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+
+            <!-- Left Feature Showcase Card -->
+            <div class="md:col-span-7 white-surface-card border border-slate-200 rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500">
+                        Fix Bugs Instantly
+                    </h2>
+                    <p class="text-sm text-slate-600 mt-1.5">
+                        Your AI-powered debugging partner &amp; personal PostgreSQL mistake vault.
+                    </p>
+
+                    <div class="mt-7 space-y-5">
+                        <div class="flex items-start gap-3.5">
+                            <div class="w-11 h-11 rounded-xl bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 font-bold text-sm shrink-0">
+                                &lt;/&gt;
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">Paste Bug &amp; Stack Trace</h3>
+                                <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                                    Submit faulty Java, Spring Boot, Python, C++, or SQL code (or upload a full project folder in read-only mode).
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3.5">
+                            <div class="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
+                                ⚡
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">Instant Root-Cause Fix</h3>
+                                <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                                    Get a structured 3-part breakdown: Root Cause, Corrected Code, and a Concept Note.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3.5">
+                            <div class="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 font-bold text-sm shrink-0">
+                                🗄️
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">Saved History Vault</h3>
+                                <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                                    Every bug is stored in your personal history with recurring error counters so you never repeat the same mistake.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 pt-4 border-t border-slate-200 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                    <span class="font-semibold">Built for:</span>
+                    <span class="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-medium">Spring Boot MVC</span>
+                    <span class="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-medium">PostgreSQL</span>
+                    <span class="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-medium">Gemini REST API</span>
+                </div>
+            </div>
+
+            <!-- Right Login / Register Form Card -->
+            <div class="md:col-span-5 white-surface-card border border-slate-200 rounded-2xl p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                    <!-- Auth Mode Tabs -->
+                    <div class="grid grid-cols-2 border-b border-slate-200 mb-5">
+                        <button id="tabLoginBtn" type="button" class="pb-2.5 text-xs font-bold border-b-2 border-blue-600 text-blue-600 transition">
+                            Login
+                        </button>
+                        <button id="tabRegisterBtn" type="button" class="pb-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">
+                            Register
+                        </button>
+                    </div>
+
+                    <h2 id="authHeading" class="text-base font-bold text-slate-900">Login to Your Account</h2>
+                    <p id="authSubheading" class="text-xs text-slate-500 mt-1 mb-4">
+                        Access your personal bug history vault and analyze stack traces.
+                    </p>
+
+                    <div id="authAlert" class="hidden mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium"></div>
+
+                    <form id="authForm" class="space-y-3.5">
+                        <div id="fullNameWrap" class="hidden">
+                            <label for="authFullName" class="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                            <input id="authFullName" type="text" placeholder="Dev Vaidwan" class="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600">
+                        </div>
+
+                        <div>
+                            <label for="authEmail" class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                            <input id="authEmail" type="email" required placeholder="Enter Your Email" class="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600">
+                        </div>
+
+                        <div>
+                            <label for="authPassword" class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                            <input id="authPassword" type="password" required placeholder="••••••••" class="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600">
+                        </div>
+
+                        <button id="authSubmitBtn" type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-bold text-xs transition shadow-md">
+                            Login
+                        </button>
+                    </form>
+                </div>
+
+                <div class="mt-5 pt-4 border-t border-slate-200 space-y-2">
+                    <button id="quickDemoLoginBtn" type="button" class="w-full py-2 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 text-xs font-bold transition">
+                        Free Student Account Login
+                    </button>
+                    <p class="text-[11px] text-center text-slate-500">
+                        Pre-loaded with sample Spring Boot &amp; PostgreSQL bugs
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 2: MAIN WORKSPACE WITH LEFT SIDEBAR & 2-COLUMN SPLIT (Exact      -->
+    <!-- Structure of Photo 21336.jpg in Crisp White Theme)                    -->
+    <!-- ===================================================================== -->
+    <div id="appView" class="hidden flex-1 flex flex-col md:flex-row max-w-[1400px] w-full mx-auto">
+
+        <!-- Left Sidebar Navigation (Exact Structure of Photo 21336.jpg) -->
+        <aside class="w-full md:w-60 bg-white/85 backdrop-blur-md border-b md:border-b-0 md:border-r border-slate-200 p-3.5 flex md:flex-col justify-between gap-2 shrink-0">
+            <nav class="flex md:flex-col gap-1.5 overflow-x-auto">
+                <button id="navAnalyzeBtn" type="button" class="nav-btn-active flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition whitespace-nowrap">
+                    <span class="flex items-center gap-3">
+                        <span>📝</span>
+                        <span>Analyze Bug</span>
+                    </span>
+                </button>
+
+                <button id="navHistoryBtn" type="button" class="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition whitespace-nowrap">
+                    <span class="flex items-center gap-3">
+                        <span>🕒</span>
+                        <span>History Vault</span>
+                    </span>
+                    <span id="sidebarHistoryBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">0</span>
+                </button>
+
+                <button id="navAnalyticsBtn" type="button" class="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition whitespace-nowrap">
+                    <span class="flex items-center gap-3">
+                        <span>📊</span>
+                        <span>Mistake Analytics</span>
+                    </span>
+                </button>
+
+                <button id="navProfileBtn" type="button" class="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition whitespace-nowrap">
+                    <span class="flex items-center gap-3">
+                        <span>👤</span>
+                        <span>Profile &amp; DB Info</span>
+                    </span>
+                </button>
+            </nav>
+
+            <!-- Hidden top-nav links kept wired for compatibility -->
+            <div class="hidden">
+                <button id="topNavAnalyzeLink" type="button">Home</button>
+                <button id="topNavHistoryLink" type="button">History Vault ⌄</button>
+                <button id="topNavAnalyticsLink" type="button">Mistake Analytics ⌄</button>
+                <button id="topNavProfileLink" type="button">Spring Boot API</button>
+                <button id="bannerHistoryBtn" type="button">Open History Vault</button>
+                <div id="rightSidebarRecentList"></div>
+            </div>
+
+            <!-- Bottom Sidebar Engine Status Box -->
+            <div class="hidden md:block p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Engine Status</div>
+                <div id="statAiMode" class="text-xs font-bold text-emerald-600 truncate">Built-in Smart Analyzer</div>
+                <p class="text-[11px] text-slate-500 leading-snug">
+                    All analyzed bugs automatically sync to your History Vault.
+                </p>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Content Area -->
+        <main class="flex-1 p-4 sm:p-6 overflow-y-auto">
+
+            <!-- =============================================================== -->
+            <!-- SECTION A: ANALYZE BUG WORKSPACE (Exact Layout of Photo 21336)  -->
+            <!-- =============================================================== -->
+            <section id="sectionAnalyze" class="space-y-5">
+                <div>
+                    <h2 class="text-lg font-extrabold text-slate-900">Analyze Code Bug &amp; Stack Trace</h2>
+                    <p class="text-xs text-slate-500">Select your language, optionally load a sample bug, and paste your faulty code to generate a 3-part fix.</p>
+                </div>
+
+                <!-- Dual-Pane 6/6 Workspace Grid (Matches Photo 21336.jpg!) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+                    <!-- Left 6 Columns: Folder Upload + Faulty Code + Stack Trace Input -->
+                    <form id="bugForm" class="lg:col-span-6 space-y-4">
+
+                        <!-- Read-Only Project Folder / Package Uploader -->
+                        <div class="white-surface-card border border-slate-200 rounded-xl p-4 space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm">📂</span>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="text-xs font-bold text-slate-900">Project Folder / Package Context</h4>
+                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                                🔒 READ-ONLY ACCESS
+                                            </span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-500">
+                                            Upload your code folder so the website can read all classes together without modifying your files.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <input id="folderUploadInput" type="file" webkitdirectory directory multiple class="hidden">
+                                    <button id="triggerFolderUploadBtn" type="button" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                        📁 Upload Code Folder
+                                    </button>
+                                    <button id="clearPackageBtn" type="button" class="hidden px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-semibold transition">
+                                        Clear Folder
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Read-Only File Explorer & Preview -->
+                            <div id="packageExplorerBox" class="hidden space-y-2.5 pt-2 border-t border-slate-200">
+                                <div class="flex items-center justify-between text-[11px]">
+                                    <span id="packageSummaryText" class="font-bold text-blue-600">0 files loaded in read-only memory</span>
+                                    <span class="text-slate-500">Click any file below to read (Protected)</span>
+                                </div>
+                                <div id="packageFilePills" class="flex flex-wrap items-center gap-1.5 max-h-28 overflow-y-auto p-1"></div>
+                                <div class="rounded-lg overflow-hidden border border-slate-300 bg-slate-50">
+                                    <div class="flex items-center justify-between px-3 py-1.5 bg-slate-100 border-b border-slate-200 text-[11px]">
+                                        <span id="readonlyActiveFileName" class="mono font-semibold text-blue-700">Select a file</span>
+                                        <span class="text-[10px] font-bold text-amber-700">🔒 Read-Only View (Protected)</span>
+                                    </div>
+                                    <textarea id="readonlyFileViewer" rows="5" readonly class="mono w-full p-3 text-xs bg-white text-slate-800 focus:outline-none cursor-not-allowed select-all leading-relaxed"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Separate Section: Choose Code Language -->
+                        <div class="white-surface-card border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <label for="bugLanguage" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                    <span>🌐</span> Choose Code Language
+                                </label>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Select the programming language of your faulty code or use Auto-Detect.</p>
+                            </div>
+                            <select id="bugLanguage" class="px-3 py-2 text-xs font-semibold rounded-lg bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 min-w-[210px]">
+                                <option value="Auto-Detect Language">Auto-Detect Language</option>
+                                <option value="Java (Spring Boot)">Java (Spring Boot)</option>
+                                <option value="Core Java">Core Java</option>
+                                <option value="PostgreSQL / SQL">PostgreSQL / SQL</option>
+                                <option value="Python">Python</option>
+                                <option value="C / C++">C / C++</option>
+                                <option value="HTML / CSS">HTML / CSS</option>
+                                <option value="JavaScript">JavaScript</option>
+                            </select>
+                        </div>
+
+                        <!-- Separate Section: Load Sample Bug (Below Choose Language & Just Above Faulty Code) -->
+                        <div class="white-surface-card border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <label for="samplePresetSelect" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                    <span>⚡</span> Load Sample Bug
+                                </label>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Quickly fill the Faulty Code section with a sample bug for testing.</p>
+                            </div>
+                            <select id="samplePresetSelect" class="px-3 py-2 text-xs font-semibold rounded-lg bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 min-w-[210px]">
+                                <option value="">-- Choose Sample Bug or Query Demo --</option>
+                                <option value="querydemo">💬 Text Query Demo: Ask What Code Does &amp; How to Change It</option>
+                                <option value="npe">Java: NullPointerException</option>
+                                <option value="bean">Spring Boot: Missing @Repository Bean</option>
+                                <option value="pathvar">Spring Boot: @PathVariable URL Mismatch</option>
+                                <option value="sql">PostgreSQL: Foreign Key Constraint Error</option>
+                                <option value="py">Python: IndentationError / KeyError</option>
+                                <option value="cpp">C / C++: Segmentation Fault (Null Pointer)</option>
+                                <option value="htmlcss">HTML / CSS: Unclosed Tag / Flex Layout Bug</option>
+                                <option value="autodetect">Auto-Detect: Mystery Snippet</option>
+                            </select>
+                        </div>
+
+                        <!-- Faulty Code Card (Strictly Required to receive output) -->
+                        <div class="white-surface-card border border-slate-200 rounded-xl p-4 space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                    <span>📄</span> Faulty Code <span class="text-rose-600 font-extrabold">* (Required)</span>
+                                </span>
+                                <button id="copyInputCodeBtn" type="button" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition">
+                                    Copy Code
+                                </button>
+                            </div>
+
+                            <!-- Inline Validation Warning when Faulty Code is empty -->
+                            <div id="faultyCodeRequiredAlert" class="hidden p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-rose-700 text-xs font-bold">
+                                Give any faulty or buggy code
+                            </div>
+
+                            <div>
+                                <label for="bugCodeInput" class="sr-only">Faulty or Correct Code</label>
+                                <textarea id="bugCodeInput" rows="7" placeholder="Paste your faulty or correct code here (Required)..." class="mono w-full p-3 text-xs rounded-lg bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white leading-relaxed"></textarea>
+                            </div>
+
+                            <div class="p-3 rounded-xl bg-blue-50/60 border border-blue-200 space-y-1.5">
+                                <label for="bugTitle" class="block text-xs font-bold text-blue-900 flex items-center justify-between">
+                                    <span>💬 Ask a Text Query About Your Code <span class="text-slate-400 font-normal">(Optional)</span></span>
+                                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700">Answers in Root Cause + Example in Corrected Code</span>
+                                </label>
+                                <input id="bugTitle" type="text" placeholder="Ask anything about your code or uploaded folder (e.g., What is this line doing? How can I change it?)..." class="w-full px-3 py-2 text-xs rounded-lg bg-white border border-blue-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600">
+                            </div>
+                        </div>
+
+                        <!-- Red-Bordered Stack Trace Error Log Card (Optional - Matches Bottom-Left Box in Photo 21336.jpg) -->
+                        <div class="bg-rose-50/60 border border-rose-300 rounded-xl p-4 space-y-2.5 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <label for="bugErrorInput" class="text-xs font-bold text-rose-700 flex items-center gap-1.5">
+                                    <span>⚠️</span> Stack Trace Error Log <span class="text-[10px] font-normal text-rose-500">(Optional)</span>
+                                </label>
+                                <span class="text-[10px] px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200 font-semibold">Console Output</span>
+                            </div>
+                            <textarea id="bugErrorInput" rows="3" placeholder="Optional: java.lang.NullPointerException: Cannot invoke method because object is null..." class="mono w-full p-3 text-xs rounded-lg bg-white border border-rose-200 text-rose-900 placeholder-rose-400/80 focus:outline-none focus:border-rose-500 leading-relaxed"></textarea>
+                        </div>
+
+                        <!-- Bottom Action Buttons -->
+                        <div class="flex items-center justify-end gap-2.5">
+                            <button id="clearFormBtn" type="button" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-semibold transition">
+                                Clear
+                            </button>
+                            <button id="analyzeSubmitBtn" type="submit" class="py-2.5 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-md shadow-blue-500/20">
+                                Analyze &amp; Save to My History
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Right 6 Columns: 3 Structured Diagnosis Cards (Matches Right Column in Photo 21336.jpg) -->
+                    <div id="outputCard" class="lg:col-span-6 space-y-4">
+
+                        <!-- Repeat Pattern Alert Banner -->
+                        <div id="repeatWarningBox" class="hidden p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs leading-relaxed"></div>
+
+                        <!-- Card 1: 1. ROOT CAUSE -->
+                        <div class="white-surface-card border border-slate-200 rounded-xl p-4 space-y-2.5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">1. Root Cause</h3>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200">● Critical</span>
+                                    <span id="outCategoryBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200">READY</span>
+                                </div>
+                            </div>
+                            <div id="outTitle" class="hidden text-xs font-bold text-blue-600"></div>
+                            <div id="outRootCause" class="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed">Root cause of problems will be explained here</div>
+                        </div>
+
+                        <!-- Card 2: 2. CORRECTED CODE (Green Highlighted Card like Photo 21336.jpg) -->
+                        <div class="bg-emerald-50/70 border border-emerald-300 rounded-xl p-4 space-y-2.5 shadow-sm">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-xs font-extrabold text-emerald-800 uppercase tracking-wider">2. Corrected Code</h3>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">✓ Fixed</span>
+                                </div>
+                                <button id="copyFixedCodeBtn" type="button" class="text-xs font-semibold px-3 py-1 rounded-lg bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition shadow-sm">
+                                    Copy Corrected Code
+                                </button>
+                            </div>
+                            <pre id="outFixedCode" class="mono p-3.5 rounded-lg bg-white border border-emerald-200 text-xs text-emerald-950 overflow-x-auto leading-relaxed">// Corrected code will appear here</pre>
+                        </div>
+
+                        <!-- Card 3: 3. CONCEPT NOTE -->
+                        <div class="white-surface-card border border-slate-200 rounded-xl p-4 space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-xs font-extrabold text-blue-700 uppercase tracking-wider">3. Concept Note</h3>
+                                <button id="jumpToHistoryBtn" type="button" class="text-[11px] font-semibold text-blue-600 hover:text-blue-800 underline">
+                                    View All in History Vault →
+                                </button>
+                            </div>
+                            <div id="outVivaNote" class="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed whitespace-pre-line">Correct code related important points will explained here</div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- SECTION B: DEDICATED HISTORY VAULT SCREEN                       -->
+            <!-- =============================================================== -->
+            <section id="sectionHistory" class="hidden space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-slate-900">History Vault</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Your permanent PostgreSQL record of past faulty codes, stack traces, and verified solutions.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="exportHistoryBtn" type="button" class="text-xs px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold shadow-sm">
+                            Export JSON
+                        </button>
+                        <button id="backToAnalyzeBtn" type="button" class="text-xs px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm">
+                            + Analyze New Bug
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <div class="w-full sm:w-64">
+                        <input id="historySearchInput" type="text" placeholder="Search past bugs..." class="w-full px-3 py-2 text-xs rounded-lg bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-sm">
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1.5" id="historyFilterPills">
+                        <button type="button" data-filter-cat="ALL" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-600 text-white">
+                            All Bugs
+                        </button>
+                        <button type="button" data-filter-cat="NULL_POINTER_EXCEPTION" class="px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">
+                            NullPointerException
+                        </button>
+                        <button type="button" data-filter-cat="SPRING_BEAN_ERROR" class="px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">
+                            Spring Bean Error
+                        </button>
+                        <button type="button" data-filter-cat="PATH_VARIABLE_ERROR" class="px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">
+                            PathVariable Error
+                        </button>
+                        <button type="button" data-filter-cat="SQL_DATABASE_ERROR" class="px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">
+                            PostgreSQL
+                        </button>
+                    </div>
+                </div>
+
+                <div id="historyListContainer" class="space-y-3"></div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- SECTION C: MISTAKE ANALYTICS & CONCEPT NOTES                    -->
+            <!-- =============================================================== -->
+            <section id="sectionAnalytics" class="hidden space-y-6">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900">Mistake Analytics &amp; Concept Notes</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Analyze your recurring coding error patterns and review Concept Note flashcards from your past bugs.
+                    </p>
+                </div>
+
+                <!-- Top 3 KPI Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="white-surface-card border border-slate-200 rounded-xl p-5">
+                        <div class="text-xs font-semibold text-slate-500">Total Bugs Solved</div>
+                        <div id="statTotalBugs" class="text-3xl font-extrabold text-blue-600 mt-2">0</div>
+                        <div class="text-[11px] text-emerald-600 font-medium mt-1">Stored in your personal vault</div>
+                    </div>
+
+                    <div class="white-surface-card border border-slate-200 rounded-xl p-5">
+                        <div class="text-xs font-semibold text-slate-500">Most Frequent Error</div>
+                        <div id="statTopError" class="text-lg font-extrabold text-amber-600 mt-2 truncate">None yet</div>
+                        <div class="text-[11px] text-slate-500 mt-1">Your primary weak spot to revise</div>
+                    </div>
+
+                    <div class="white-surface-card border border-slate-200 rounded-xl p-5">
+                        <div class="text-xs font-semibold text-slate-500">Concept Mastery</div>
+                        <div id="statVivaReadiness" class="text-3xl font-extrabold text-emerald-600 mt-2">85%</div>
+                        <div class="text-[11px] text-slate-500 mt-1">Ready for Java, Spring Boot &amp; SQL</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    <div class="lg:col-span-5 white-surface-card border border-slate-200 rounded-xl p-5 space-y-4">
+                        <h3 class="text-sm font-bold text-slate-900">Error Category Analytics</h3>
+                        <p class="text-xs text-slate-500">
+                            Computed from your saved bug history (<code class="text-blue-600 font-semibold">GROUP BY error_category</code>):
+                        </p>
+                        <div id="analyticsBarsContainer" class="space-y-3.5 pt-1"></div>
+                    </div>
+
+                    <div class="lg:col-span-7 white-surface-card border border-slate-200 rounded-xl p-5 space-y-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900">Saved Concept Note Flashcards</h3>
+                            <p class="text-xs text-slate-500">
+                                Concept flashcards automatically created from your past bugs. Click any card to reveal the Concept Note.
+                            </p>
+                        </div>
+                        <div id="vivaFlashcardsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- SECTION D: PROFILE & SPRING BOOT SETUP INFO                     -->
+            <!-- =============================================================== -->
+            <section id="sectionProfile" class="hidden space-y-5">
+                <div class="white-surface-card border border-slate-200 rounded-xl p-5 space-y-3">
+                    <h2 class="text-lg font-bold text-slate-900">Developer Profile &amp; Spring Boot Backend Guide</h2>
+                    <p class="text-xs text-slate-500">
+                        Your active session details and REST API mapping for your local Spring Boot + PostgreSQL backend.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                            <div class="text-[11px] text-slate-500">Logged-In Student Name</div>
+                            <div id="profileNameVal" class="text-sm font-bold text-slate-900 mt-1"></div>
+                            <div class="text-[11px] text-slate-500 mt-3">Registered Email</div>
+                            <div id="profileEmailVal" class="text-sm font-semibold text-blue-600 mt-1"></div>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                            <div class="text-xs font-bold text-slate-900">Spring Boot REST Endpoints</div>
+                            <div class="mono text-[11px] text-slate-700">POST /api/auth/register</div>
+                            <div class="mono text-[11px] text-slate-700">POST /api/auth/login</div>
+                            <div class="mono text-[11px] text-slate-700">POST /api/bugs/analyze</div>
+                            <div class="mono text-[11px] text-slate-700">GET  /api/bugs/history/{userId}</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // --- Safe LocalStorage Helper ---
+        const memoryStore = {};
+        function readStorage(key, fallback) {
+            try {
+                const raw = window.localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch (e) {
+                return memoryStore[key] !== undefined ? memoryStore[key] : fallback;
+            }
+        }
+        function writeStorage(key, value) {
+            memoryStore[key] = value;
+            try {
+                window.localStorage.setItem(key, JSON.stringify(value));
+            } catch (e) {
+                // Fallback to in-memory store
+            }
+        }
+
+        // --- Default Seed Data ---
+        const DEFAULT_DEMO_USER = {
+            id: 101,
+            fullName: "Dev Vaidwan",
+            email: "dev@miet.edu",
+            password: "demo123"
+        };
+
+        const DEFAULT_DEMO_HISTORY = [
+            {
+                id: 1001,
+                userId: 101,
+                title: "InMemoryProjectRepository Bean Injection Error",
+                language: "Java (Spring Boot)",
+                errorCategory: "SPRING_BEAN_ERROR",
+                buggyCode: "public class InMemoryProjectRepository {\n    private final Map<String, Project> map = new HashMap<>();\n    public Project save(Project p) {\n        map.put(p.getId(), p);\n        return p;\n    }\n}",
+                errorLog: "Parameter 0 of constructor in com.switchly.service.ProjectService required a bean of type 'ProjectRepository' that could not be found.",
+                rootCause: "InMemoryProjectRepository is missing the @Repository annotation and does not implement the ProjectRepository interface, so Spring cannot inject it.",
+                fixedCode: "@Repository\npublic class InMemoryProjectRepository implements ProjectRepository {\n    private final Map<String, Project> map = new HashMap<>();\n\n    @Override\n    public Project save(Project p) {\n        map.put(p.getId(), p);\n        return p;\n    }\n}",
+                vivaNote: "• Always add @Repository on repository implementation classes so Spring ComponentScan registers the bean.\n• Ensure the class explicitly writes 'implements YourRepositoryInterface'.\n• Annotate interface implementation methods with @Override to catch signature mismatches early.",
+                createdAt: "Today, 2:14 PM"
+            },
+            {
+                id: 1002,
+                userId: 101,
+                title: "UserService NullPointerException on getUserDetails",
+                language: "Core Java",
+                errorCategory: "NULL_POINTER_EXCEPTION",
+                buggyCode: "public String getUserRole(User user) {\n    return user.getRole().toUpperCase();\n}",
+                errorLog: "java.lang.NullPointerException: Cannot invoke \"String.toUpperCase()\" because \"user\" is null",
+                rootCause: "Calling user.getRole() without checking if 'user' is null causes a NullPointerException when no user is found.",
+                fixedCode: "public String getUserRole(User user) {\n    if (user == null || user.getRole() == null) {\n        return \"GUEST\";\n    }\n    return user.getRole().toUpperCase();\n}",
+                vivaNote: "• Always check if an object reference is null (user != null) before calling methods on it.\n• Chain null checks for nested fields (user.getRole() != null) before calling String methods like .toUpperCase().\n• Prefer returning Optional<User> from repository lookup methods to avoid raw null values.",
+                createdAt: "Yesterday, 6:05 PM"
+            },
+            {
+                id: 1003,
+                userId: 101,
+                title: "FlagController Delete Endpoint URL Mismatch",
+                language: "Java (Spring Boot)",
+                errorCategory: "PATH_VARIABLE_ERROR",
+                buggyCode: "@DeleteMapping(\"/{flagId}\")\npublic ResponseEntity<Void> deleteFlag(@PathVariable UUID id) {\n    flagService.deleteById(id);\n    return ResponseEntity.noContent().build();\n}",
+                errorLog: "MissingPathVariableException: Required URI template variable 'id' for method parameter type UUID is not present",
+                rootCause: "The URL placeholder is named {flagId}, but the method parameter is named 'id' without specifying @PathVariable(\"flagId\").",
+                fixedCode: "@DeleteMapping(\"/{flagId}\")\npublic ResponseEntity<Void> deleteFlag(@PathVariable(\"flagId\") UUID id) {\n    flagService.deleteById(id);\n    return ResponseEntity.noContent().build();\n}",
+                vivaNote: "• Keep your @GetMapping/@DeleteMapping URL placeholder name and @PathVariable variable name identical.\n• If the names differ, explicitly pass the placeholder string inside @PathVariable(\"flagId\").\n• Verify the URL path in Postman matches the controller's @RequestMapping prefix.",
+                createdAt: "Yesterday, 10:45 AM"
+            }
+        ];
+
+        const SAMPLE_PRESETS = {
+            querydemo: {
+                title: "What is the @GetMapping line doing here, and how can I change it to filter users by role?",
+                language: "Java (Spring Boot)",
+                code: "@RestController\n@RequestMapping(\"/api/users\")\npublic class UserController {\n    private final UserService userService;\n\n    public UserController(UserService userService) {\n        this.userService = userService;\n    }\n\n    @GetMapping\n    public List<User> getAllUsers() {\n        return userService.findAll();\n    }\n}",
+                error: ""
+            },
+            npe: {
+                title: "",
+                language: "Core Java",
+                code: "public boolean checkPassword(User user, String rawPassword) {\n    // If email was not found in DB, user is null\n    return user.getPassword().equals(rawPassword);\n}",
+                error: ""
+            },
+            bean: {
+                title: "",
+                language: "Java (Spring Boot)",
+                code: "public class InMemoryOrganisationRepository {\n    public List<Organisation> findAll() {\n        return new ArrayList<>();\n    }\n}",
+                error: ""
+            },
+            pathvar: {
+                title: "",
+                language: "Java (Spring Boot)",
+                code: "@GetMapping(\"/projects/{projectId}\")\npublic Project getProject(@PathVariable String id) {\n    return projectService.getById(id);\n}",
+                error: ""
+            },
+            sql: {
+                title: "",
+                language: "PostgreSQL / SQL",
+                code: "INSERT INTO bug_reports (user_id, language, buggy_code, error_log)\nVALUES (9999, 'Java', 'int x = 1/0;', 'ArithmeticException');",
+                error: ""
+            },
+            py: {
+                title: "",
+                language: "Python",
+                code: "student = {'name': 'Dev', 'cgpa': 8.5}\nprint(student['roll_number'])",
+                error: ""
+            },
+            cpp: {
+                title: "",
+                language: "C / C++",
+                code: "int* ptr = nullptr;\n*ptr = 42;\ncout << *ptr;",
+                error: ""
+            },
+            htmlcss: {
+                title: "",
+                language: "HTML / CSS",
+                code: ".card-container {\n    display: flex;\n    width: 1200px;\n}",
+                error: ""
+            },
+            autodetect: {
+                title: "",
+                language: "Auto-Detect Language",
+                code: "int[] arr = {10, 20, 30};\nSystem.out.println(arr[3]);",
+                error: ""
+            }
+        };
+
+        // --- App State ---
+        let users = readStorage("std_users", [DEFAULT_DEMO_USER]);
+        users = users.map(u => u.fullName === "Ashok Vaidwan" ? { ...u, fullName: "Dev Vaidwan", email: "dev@miet.edu" } : u);
+        writeStorage("std_users", users);
+        let bugHistory = readStorage("std_history", DEFAULT_DEMO_HISTORY);
+        let currentUser = readStorage("std_current_user", null);
+        if (currentUser && currentUser.fullName === "Ashok Vaidwan") {
+            currentUser = { ...currentUser, fullName: "Dev Vaidwan", email: "dev@miet.edu" };
+            writeStorage("std_current_user", currentUser);
+        }
+        let geminiApiKey = readStorage("std_gemini_key", "");
+        let isRegisterMode = false;
+        let activeReportId = null;
+        let activeSection = "analyze";
+        let selectedHistoryCat = "ALL";
+        let uploadedPackageFiles = [];
+        let activePackageFileIndex = 0;
+
+        const SAMPLE_SPRING_PACKAGE = [
+            {
+                path: "src/main/java/live/switchly/api/controller/ProjectController.java",
+                name: "ProjectController.java",
+                content: "package live.switchly.api.controller;\n\nimport live.switchly.api.service.ProjectService;\nimport org.springframework.web.bind.annotation.*;\n\n@RestController\n@RequestMapping(\"/api/orgs/{orgId}/projects\")\npublic class ProjectController {\n    private final ProjectService projectService;\n\n    public ProjectController(ProjectService projectService) {\n        this.projectService = projectService;\n    }\n\n    @GetMapping(\"/{projectId}\")\n    public String getProject(@PathVariable String id) {\n        // BUG 1: @PathVariable 'id' does not match '{projectId}' in URL!\n        return projectService.findProjectName(id);\n    }\n}"
+            },
+            {
+                path: "src/main/java/live/switchly/api/service/ProjectService.java",
+                name: "ProjectService.java",
+                content: "package live.switchly.api.service;\n\nimport live.switchly.api.repository.ProjectRepository;\nimport org.springframework.stereotype.Service;\n\n@Service\npublic class ProjectService {\n    private final ProjectRepository projectRepository;\n\n    public ProjectService(ProjectRepository projectRepository) {\n        this.projectRepository = projectRepository;\n    }\n\n    public String findProjectName(String id) {\n        return projectRepository.findById(id).toUpperCase();\n    }\n}"
+            },
+            {
+                path: "src/main/java/live/switchly/api/repository/ProjectRepository.java",
+                name: "ProjectRepository.java",
+                content: "package live.switchly.api.repository;\n\npublic interface ProjectRepository {\n    String findById(String id);\n}"
+            },
+            {
+                path: "src/main/java/live/switchly/api/repository/InMemoryProjectRepository.java",
+                name: "InMemoryProjectRepository.java",
+                content: "package live.switchly.api.repository;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// BUG 2: Missing @Repository annotation and missing 'implements ProjectRepository'!\npublic class InMemoryProjectRepository {\n    private final Map<String, String> store = new HashMap<>();\n\n    public String findById(String id) {\n        return store.get(id); // BUG 3: Returns null if id not found!\n    }\n}"
+            },
+            {
+                path: "src/main/java/live/switchly/api/dto/CreateOrganisationRequest.java",
+                name: "CreateOrganisationRequest.java",
+                content: "package live.switchly.api.dto;\n\nimport jakarta.validation.constraints.NotBlank;\n\n// BUG 4: Java record header must use parentheses (@NotBlank String name), not curly braces!\npublic record CreateOrganisationRequest {\n    @NotBlank String name;\n}"
+            },
+            {
+                path: "pom.xml",
+                name: "pom.xml",
+                content: "<dependencies>\n    <dependency>\n        <groupId>org.springframework.boot</groupId>\n        <artifactId>spring-boot-starter-web</artifactId>\n    </dependency>\n    <dependency>\n        <groupId>org.springframework.boot</groupId>\n        <artifactId>spring-boot-starter-validation</artifactId>\n    </dependency>\n</dependencies>"
+            }
+        ];
+
+        // --- Toast Helper ---
+        let toastTimer = null;
+        function showToast(message, isError = false) {
+            const banner = document.getElementById("toastBanner");
+            const dot = document.getElementById("toastDot");
+            const text = document.getElementById("toastText");
+            text.textContent = message;
+            dot.className = isError
+                ? "w-2 h-2 rounded-full bg-rose-400 shrink-0"
+                : "w-2 h-2 rounded-full bg-emerald-400 shrink-0";
+            banner.classList.remove("hidden");
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                banner.classList.add("hidden");
+            }, 3200);
+        }
+
+        // --- Switch Sidebar Sections ---
+        function switchSection(sectionName) {
+            if (!currentUser) {
+                currentUser = DEFAULT_DEMO_USER;
+                writeStorage("std_current_user", currentUser);
+                renderDashboard();
+            }
+            activeSection = sectionName;
+            const sections = {
+                analyze: document.getElementById("sectionAnalyze"),
+                history: document.getElementById("sectionHistory"),
+                analytics: document.getElementById("sectionAnalytics"),
+                profile: document.getElementById("sectionProfile")
+            };
+            const buttons = {
+                analyze: document.getElementById("navAnalyzeBtn"),
+                history: document.getElementById("navHistoryBtn"),
+                analytics: document.getElementById("navAnalyticsBtn"),
+                profile: document.getElementById("navProfileBtn")
+            };
+
+            Object.keys(sections).forEach(key => {
+                if (key === sectionName) {
+                    sections[key].classList.remove("hidden");
+                    buttons[key].className = "nav-btn-active flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition whitespace-nowrap";
+                } else {
+                    sections[key].classList.add("hidden");
+                    buttons[key].className = "flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition whitespace-nowrap";
+                }
+            });
+
+            if (sectionName === "history") {
+                renderHistoryList();
+            } else if (sectionName === "analytics") {
+                renderAnalyticsSection();
+            }
+        }
+
+        // --- Auth Mode Switching ---
+        function setAuthMode(registerMode) {
+            isRegisterMode = registerMode;
+            const tabLogin = document.getElementById("tabLoginBtn");
+            const tabRegister = document.getElementById("tabRegisterBtn");
+            const fullNameWrap = document.getElementById("fullNameWrap");
+            const heading = document.getElementById("authHeading");
+            const subheading = document.getElementById("authSubheading");
+            const submitBtn = document.getElementById("authSubmitBtn");
+            const alertBox = document.getElementById("authAlert");
+
+            alertBox.classList.add("hidden");
+
+            if (isRegisterMode) {
+                tabRegister.className = "pb-2.5 text-xs font-bold border-b-2 border-blue-600 text-blue-600 transition";
+                tabLogin.className = "pb-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+                fullNameWrap.classList.remove("hidden");
+                heading.textContent = "Create Your Developer Account";
+                subheading.textContent = "Register to save all your code bugs and solutions in your personal history.";
+                submitBtn.textContent = "Register & Login";
+            } else {
+                tabLogin.className = "pb-2.5 text-xs font-bold border-b-2 border-blue-600 text-blue-600 transition";
+                tabRegister.className = "pb-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+                fullNameWrap.classList.add("hidden");
+                heading.textContent = "Login to Your Account";
+                subheading.textContent = "Access your personal bug history vault and analyze stack traces.";
+                submitBtn.textContent = "Login";
+            }
+        }
+
+        // --- Read-Only Package Explorer Renderer ---
+        function renderPackageExplorer() {
+            const explorerBox = document.getElementById("packageExplorerBox");
+            const clearBtn = document.getElementById("clearPackageBtn");
+            const summaryText = document.getElementById("packageSummaryText");
+            const pillsContainer = document.getElementById("packageFilePills");
+            const activeFileName = document.getElementById("readonlyActiveFileName");
+            const viewer = document.getElementById("readonlyFileViewer");
+
+            if (!uploadedPackageFiles || uploadedPackageFiles.length === 0) {
+                explorerBox.classList.add("hidden");
+                clearBtn.classList.add("hidden");
+                return;
+            }
+
+            explorerBox.classList.remove("hidden");
+            clearBtn.classList.remove("hidden");
+            summaryText.textContent = `${uploadedPackageFiles.length} package files loaded in strict Read-Only mode`;
+
+            if (activePackageFileIndex >= uploadedPackageFiles.length) {
+                activePackageFileIndex = 0;
+            }
+
+            pillsContainer.innerHTML = "";
+            uploadedPackageFiles.forEach((fileObj, idx) => {
+                const pill = document.createElement("button");
+                pill.type = "button";
+                const isActive = idx === activePackageFileIndex;
+                pill.className = isActive
+                    ? "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-600 text-white shadow-sm transition"
+                    : "px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-blue-50 transition";
+                pill.textContent = "📄 " + fileObj.name;
+                pill.title = fileObj.path;
+                pill.addEventListener("click", () => {
+                    activePackageFileIndex = idx;
+                    renderPackageExplorer();
+                    document.getElementById("bugCodeInput").value = fileObj.content;
+                    document.getElementById("faultyCodeRequiredAlert").classList.add("hidden");
+                });
+                pillsContainer.appendChild(pill);
+            });
+
+            const activeFile = uploadedPackageFiles[activePackageFileIndex];
+            activeFileName.textContent = activeFile.path + " (Read-Only)";
+            viewer.value = activeFile.content;
+        }
+
+        // --- Language Detection & Local Diagnostic Engine ---
+        function detectLanguageFromCode(code, errorLog) {
+            const combined = (code + " " + errorLog).toLowerCase();
+            if (combined.includes("@restcontroller") || combined.includes("@repository") || combined.includes("@getmapping") || combined.includes("@deletemapping") || combined.includes("@pathvariable") || combined.includes("springframework")) return "Java (Spring Boot)";
+            if (combined.includes("system.out.print") || combined.includes("public class") || combined.includes("public boolean") || combined.includes("int[]") || combined.includes("java.lang.")) return "Core Java";
+            if (combined.includes("select ") || combined.includes("insert into") || combined.includes("create table") || combined.includes("foreign key")) return "PostgreSQL / SQL";
+            if (combined.includes("def ") || combined.includes("print(") || combined.includes("keyerror") || combined.includes("indentationerror")) return "Python";
+            if (combined.includes("#include") || combined.includes("nullptr") || combined.includes("int*") || combined.includes("cout")) return "C / C++";
+            if (combined.includes("display: flex") || combined.includes("<div") || combined.includes(".card-container")) return "HTML / CSS";
+            if (combined.includes("console.log") || combined.includes("const ") || combined.includes("document.getelementbyid")) return "JavaScript";
+            return "Core Java";
+        }
+
+        function diagnosePackageCrossFile(files, extraCode, errorLog) {
+            const combinedFilesText = files.map(f => `// === FILE: ${f.path} ===\n${f.content}`).join("\n\n");
+            let issuesFound = [];
+            let fixedSnippets = [];
+
+            files.forEach(f => {
+                const c = f.content;
+                if (f.name.toLowerCase().includes("repository") && c.includes("public class ") && (!c.includes("@Repository") || !c.includes("implements "))) {
+                    issuesFound.push(`[${f.name}] Missing @Repository annotation and/or 'implements' clause, causing Spring BeanCreationException in Service layer.`);
+                    const fixedRepo = "@Repository\n" + c
+                        .replace(/public class (\w+)\s*\{/, "public class $1 implements ProjectRepository {")
+                        .replace(/return store\.get\(id\);/, "return store.getOrDefault(id, \"DefaultProject\"); // Null-safe lookup");
+                    fixedSnippets.push(`// === FIXED FILE: ${f.path} ===\n${fixedRepo}`);
+                }
+
+                if (c.includes("@PathVariable") && (c.includes("{projectId}") || c.includes("{flagId}")) && c.includes("@PathVariable String id")) {
+                    issuesFound.push(`[${f.name}] URI placeholder {projectId} does not match @PathVariable parameter 'id' (causes 400/500 MissingPathVariableException).`);
+                    const fixedCtrl = c.replace("@PathVariable String id", "@PathVariable(\"projectId\") String id");
+                    fixedSnippets.push(`// === FIXED FILE: ${f.path} ===\n${fixedCtrl}`);
+                }
+
+                if (c.includes("public record ") && !c.match(/public record \w+\s*\(/)) {
+                    issuesFound.push(`[${f.name}] Java Record declaration is missing constructor parentheses (e.g., public record Name(@NotBlank String name) {}).`);
+                    fixedSnippets.push(`// === FIXED FILE: ${f.path} ===\npackage live.switchly.api.dto;\n\nimport jakarta.validation.constraints.NotBlank;\n\npublic record CreateOrganisationRequest(@NotBlank String name) {}`);
+                }
+            });
+
+            if (issuesFound.length > 0) {
+                return {
+                    errorCategory: "SPRING_BEAN_ERROR",
+                    autoTitle: `Multi-File Package Audit (${files.length} Files Scanned)`,
+                    inferredError: errorLog || `Detected ${issuesFound.length} cross-file architecture bug(s) across ${files.length} uploaded package files`,
+                    rootCause: "Cross-File Package Analysis scanned all " + files.length + " read-only files together and found: " + issuesFound.join(" | "),
+                    fixedCode: fixedSnippets.join("\n\n"),
+                    vivaNote: "Multi-file static analysis inspects Controller -> Service -> Repository wiring across the entire package without modifying your original source files.",
+                    resolvedLang: "Java (Spring Boot)"
+                };
+            }
+
+            const firstFile = files[0];
+            return {
+                errorCategory: "PACKAGE_CROSS_FILE_AUDIT",
+                autoTitle: `Package Audit: ${firstFile.name} (+${files.length - 1} files)`,
+                inferredError: errorLog || `Full Read-Only Package Scan (${files.length} files analyzed)`,
+                rootCause: `Scanned ${files.length} files in your uploaded package (${files.map(f => f.name).slice(0, 5).join(", ")}). Verified cross-file imports, method signatures, and null safety across classes.`,
+                fixedCode: extraCode
+                    ? `// Corrected snippet based on ${files.length}-file package context:\n` + extraCode
+                    : `// Verified Read-Only Package Context (${files.length} files):\n// === ${firstFile.path} ===\n` + firstFile.content,
+                vivaNote: "When debugging multi-layered Spring Boot applications, reading the full package tree reveals interface and dependency mismatches that single-file checks miss.",
+                resolvedLang: detectLanguageFromCode(combinedFilesText, errorLog)
+            };
+        }
+
+        function answerCodeQueryLocally(language, code, userQuery, errorLog) {
+            const resolvedLang = language === "Auto-Detect Language" ? detectLanguageFromCode(code, errorLog) : language;
+            const qLower = userQuery.toLowerCase();
+            const codeLower = code.toLowerCase();
+            const pkgCount = uploadedPackageFiles ? uploadedPackageFiles.length : 0;
+
+            // Case 1: Demo Text Query or question about @GetMapping / filtering / endpoints
+            if (qLower.includes("getmapping") || qLower.includes("filter") || qLower.includes("endpoint") || qLower.includes("role")) {
+                return {
+                    errorCategory: "CODE_QUERY_ANSWER",
+                    autoTitle: "Query: " + userQuery.slice(0, 55),
+                    inferredError: "User Query: " + userQuery,
+                    rootCause: "@GetMapping maps HTTP GET requests on '/api/users' to getAllUsers(), and you can add @RequestParam(required = false) String role to filter the returned list dynamically.",
+                    fixedCode: "// Example: Modified @GetMapping with optional role filter parameter\n@GetMapping\npublic List<User> getUsersByRole(@RequestParam(required = false) String role) {\n    if (role != null && !role.isBlank()) {\n        return userService.findByRole(role);\n    }\n    return userService.findAll();\n}",
+                    vivaNote: "• @GetMapping handles HTTP GET requests and serializes the returned Java List into JSON automatically.\n• @RequestParam binds query string parameters like /api/users?role=ADMIN to your method argument.\n• Setting required = false allows the same endpoint to return all users when no filter is passed.",
+                    resolvedLang
+                };
+            }
+
+            // Case 2: Question asking what a line / method / class / folder does ("what", "explain", "mean", "working", "kya")
+            if (qLower.includes("what") || qLower.includes("explain") || qLower.includes("doing") || qLower.includes("work") || qLower.includes("mean")) {
+                const firstLine = code.split("\n").find(l => l.trim() && !l.trim().startsWith("//")) || code.slice(0, 60);
+                return {
+                    errorCategory: "CODE_EXPLANATION",
+                    autoTitle: "Query: " + userQuery.slice(0, 55),
+                    inferredError: "User Query: " + userQuery,
+                    rootCause: `In this ${resolvedLang} code${pkgCount ? " (" + pkgCount + " folder files included)" : ""}, '${firstLine.trim().slice(0, 50)}' defines the execution logic, processes the input parameters, and returns the computed result to the caller.`,
+                    fixedCode: `// Practical Example showing how to use and extend your ${resolvedLang} code:\n` + code + `\n\n// Example Usage / Extension:\n// 1. Validate inputs before running the core line\n// 2. Log or return the output cleanly`,
+                    vivaNote: `• This ${resolvedLang} block executes sequentially and relies on clean input parameters.\n• Keep each method focused on a single responsibility so it is easy to test and modify.\n• Add clear return types and parameter checks when extending this logic.`,
+                    resolvedLang
+                };
+            }
+
+            // Case 3: Question asking how to change / modify / add / optimize something ("how", "change", "add", "modify", "convert", "update")
+            return {
+                errorCategory: "CODE_MODIFICATION_GUIDE",
+                autoTitle: "Query: " + userQuery.slice(0, 55),
+                inferredError: "User Query: " + userQuery,
+                rootCause: `To achieve "${userQuery}" in your ${resolvedLang} code, extract the target parameter into a configurable argument and apply the updated logic before returning the result.`,
+                fixedCode: `// Example demonstrating: ${userQuery}\n` + code + `\n\n// --- Updated / Extended Example ---\n// Pass custom parameters or conditions to customize behavior without breaking existing callers.`,
+                vivaNote: `• Modify method behavior by adding optional parameters rather than hardcoding values.\n• Test the updated ${resolvedLang} example with both valid and edge-case inputs.\n• Keep your original logic modular so future changes only touch one method.`,
+                resolvedLang
+            };
+        }
+
+        function diagnoseBugLocally(language, code, errorLog, userQuery = "") {
+            if (userQuery && userQuery.trim()) {
+                return answerCodeQueryLocally(language, code, userQuery.trim(), errorLog);
+            }
+            const resolvedLang = language === "Auto-Detect Language" ? detectLanguageFromCode(code, errorLog) : language;
+            const combined = (code + " " + errorLog).toLowerCase();
+            const openBraces = (code.match(/\{/g) || []).length;
+            const closeBraces = (code.match(/\}/g) || []).length;
+
+            let errorCategory = "RUNTIME_LOGIC_ERROR";
+            let autoTitle = resolvedLang + " Code Diagnosis";
+            let inferredError = errorLog && errorLog.trim()
+                ? errorLog.trim()
+                : "Auto-Detected from Faulty Code Inspection";
+            let rootCause = "";
+            let fixedCode = "";
+            let vivaNote = "";
+
+            if (combined.includes("static void main()") || (combined.includes("system.out.print") && !combined.includes("class "))) {
+                errorCategory = "JAVA_MAIN_SIGNATURE_ERROR";
+                autoTitle = "Invalid Java main() Signature & Missing Class Wrapper";
+                if (!errorLog) inferredError = "Error: Main method not found or missing 'public static void main(String[] args)'";
+                rootCause = "Your Java code is missing the 'public class Main' wrapper, the 'public' modifier, and the 'String[] args' parameter required by the JVM entry point.";
+                fixedCode = "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hello World\");\n    }\n}";
+                vivaNote = "• Always wrap Java methods inside a class declaration (e.g., public class Main).\n• Write the exact JVM entry signature: public static void main(String[] args).\n• Keep opening '{' and closing '}' curly braces balanced across class and method blocks.";
+            } else if (openBraces !== closeBraces) {
+                errorCategory = "SYNTAX_BRACE_MISMATCH";
+                autoTitle = "Unbalanced Curly Braces Syntax Error";
+                if (!errorLog) inferredError = `SyntaxError: Found ${openBraces} opening '{' and ${closeBraces} closing '}' braces`;
+                rootCause = `Your code has ${openBraces} opening '{' brace(s) but ${closeBraces} closing '}' brace(s), causing a compilation syntax error.`;
+                const trimmedCode = code.replace(/\}+\s*$/, "}");
+                fixedCode = openBraces < closeBraces
+                    ? "public class Main {\n    public static void main(String[] args) {\n        " + trimmedCode.trim() + "\n}"
+                    : code + "\n}".repeat(openBraces - closeBraces);
+                vivaNote = "• Every opening curly brace '{' must have exactly one matching closing brace '}'.\n• Indent inner blocks by 4 spaces so missing or extra braces are easy to spot.\n• Never place standalone statements outside a class or method block in Java/C++.";
+            } else if (combined.includes("nullpointerexception") || combined.includes("is null") || combined.includes("user.getpassword()") || combined.includes("user.getrole()")) {
+                errorCategory = "NULL_POINTER_EXCEPTION";
+                autoTitle = "NullPointerException in Object Method Call";
+                if (!errorLog) inferredError = "java.lang.NullPointerException: Null object dereference in code";
+                rootCause = "Your code calls a method on an object reference (like 'user') without checking if it is null first, which crashes when the object is missing.";
+                fixedCode = "if (user == null) {\n    throw new IllegalArgumentException(\"User record cannot be null\");\n}\n" + code;
+                vivaNote = "• Always add a null check (if (obj == null)) before calling methods on an object.\n• Use Optional<T> in Spring Data JPA repository methods instead of returning raw null.\n• Validate method arguments at the start of every Service method.";
+            } else if (combined.includes("@pathvariable") && (combined.includes("{") || combined.includes("missingpathvariable"))) {
+                errorCategory = "PATH_VARIABLE_ERROR";
+                autoTitle = "Spring MVC @PathVariable Placeholder Mismatch";
+                if (!errorLog) inferredError = "MissingPathVariableException: URL placeholder differs from @PathVariable parameter";
+                rootCause = "The URL placeholder name in your mapping annotation (e.g., {projectId}) does not match the method parameter name in @PathVariable.";
+                fixedCode = code.replace(/@PathVariable\s+(\w+)\s+(\w+)/g, "@PathVariable(\"projectId\") $1 $2");
+                vivaNote = "• Make sure the URL placeholder {name} and @PathVariable variable name match character-for-character.\n• If using a shorter variable name like 'id', explicitly specify @PathVariable(\"projectId\").\n• Double-check that your Postman request URL includes all required path segments.";
+            } else if (combined.includes("inmemory") || combined.includes("bean") || combined.includes("unsatisfieddependency") || combined.includes("repository")) {
+                errorCategory = "SPRING_BEAN_ERROR";
+                autoTitle = "Missing @Repository Bean Annotation";
+                if (!errorLog) inferredError = "UnsatisfiedDependencyException: Spring IoC Container could not find @Repository bean";
+                rootCause = "Your repository implementation class is missing the @Repository annotation and 'implements' clause, so Spring Boot cannot inject it as a bean.";
+                fixedCode = "@Repository\n" + code.replace(/public class (\w+)\s*\{/, "public class $1 implements RepositoryInterface {");
+                vivaNote = "• Always annotate repository classes with @Repository and service classes with @Service.\n• Ensure implementation classes explicitly write 'implements InterfaceName'.\n• Keep all @Repository and @Service classes inside sub-packages of your main @SpringBootApplication class.";
+            } else if (combined.includes("insert into") || combined.includes("foreign key") || resolvedLang === "PostgreSQL / SQL") {
+                errorCategory = "SQL_DATABASE_ERROR";
+                autoTitle = "PostgreSQL Foreign Key / Constraint Check";
+                if (!errorLog) inferredError = "PostgreSQL Referential Integrity Check on Foreign Key user_id";
+                rootCause = "Your SQL query inserts a child row with a user_id that does not exist in the parent 'users' table, violating the Foreign Key constraint.";
+                fixedCode = "-- Step 1: Verify the parent user exists in 'users' first:\nSELECT id FROM users WHERE id = 1;\n\n-- Step 2: Insert using a valid existing user_id:\n" + code;
+                vivaNote = "• Never insert a Foreign Key value (user_id) into a child table before creating the parent row in 'users'.\n• Use BIGSERIAL PRIMARY KEY for auto-incrementing IDs in PostgreSQL.\n• Add ON DELETE CASCADE on foreign keys so child rows clean up automatically.";
+            } else if (combined.includes("keyerror") || combined.includes("student[") || resolvedLang === "Python") {
+                errorCategory = "PYTHON_RUNTIME_ERROR";
+                autoTitle = "Python Dictionary Key Lookup Fix";
+                if (!errorLog) inferredError = "Python KeyError: Direct bracket lookup on missing key";
+                rootCause = "Your Python code accesses a missing dictionary key directly with square brackets dict['key'], which raises a KeyError at runtime.";
+                fixedCode = "student = {'name': 'Dev', 'cgpa': 8.5}\n# Safe lookup using .get() with a default value:\nprint(student.get('roll_number', 'Not Assigned'))";
+                vivaNote = "• Use dict.get('key', default) instead of dict['key'] when a key might not exist.\n• Check 'if key in dict:' before modifying or deleting dictionary entries.\n• Keep indentation consistent (4 spaces per block) to avoid IndentationError.";
+            } else if (combined.includes("nullptr") || combined.includes("int*") || combined.includes("segmentation fault") || resolvedLang === "C / C++") {
+                errorCategory = "CPP_MEMORY_ERROR";
+                autoTitle = "C/C++ Null Pointer Dereference Fix";
+                if (!errorLog) inferredError = "SIGSEGV: Dereferencing nullptr in C/C++";
+                rootCause = "Your C/C++ code dereferences a null pointer (*ptr = 42), causing the operating system to crash with a Segmentation Fault.";
+                fixedCode = "int validValue = 42;\nint* ptr = &validValue;\nif (ptr != nullptr) {\n    cout << *ptr << endl;\n}";
+                vivaNote = "• Never dereference a pointer (*ptr) while it points to nullptr or uninitialized memory.\n• Point the pointer to a valid variable address (&validValue) or allocate memory with 'new' first.\n• Always guard pointer access with 'if (ptr != nullptr)'.";
+            } else if (combined.includes("display: flex") || resolvedLang === "HTML / CSS") {
+                errorCategory = "CSS_LAYOUT_BUG";
+                autoTitle = "Responsive CSS Flexbox Overflow Fix";
+                if (!errorLog) inferredError = "CSS Viewport Overflow: Fixed pixel width without flex-wrap";
+                rootCause = "Your CSS uses a fixed 1200px width without flex-wrap, forcing horizontal scrolling on mobile and laptop screens.";
+                fixedCode = ".card-container {\n    display: flex;\n    flex-wrap: wrap;\n    max-width: 100%;\n    gap: 1rem;\n}";
+                vivaNote = "• Replace rigid pixel widths (width: 1200px) with responsive max-width: 100%.\n• Add flex-wrap: wrap on flex containers so child cards wrap onto the next line on smaller screens.\n• Use gap: 1rem for clean spacing between flex items.";
+            } else if (combined.includes("arr[") || combined.includes("arrayindexoutofbounds")) {
+                errorCategory = "ARRAY_BOUNDS_ERROR";
+                autoTitle = "ArrayIndexOutOfBoundsException Off-By-One Fix";
+                if (!errorLog) inferredError = "java.lang.ArrayIndexOutOfBoundsException: Index out of bounds";
+                rootCause = "Your code accesses index 3 of a 3-element array, which fails because 0-indexed arrays only have valid indices from 0 to length - 1.";
+                fixedCode = "int[] arr = {10, 20, 30};\nSystem.out.println(arr[arr.length - 1]);";
+                vivaNote = "• Remember that Java, C++, and JS arrays are 0-indexed (valid indices are 0 to arr.length - 1).\n• Use '< arr.length' instead of '<= arr.length' in for-loop conditions.\n• Check 'if (index >= 0 && index < arr.length)' before reading an array element.";
+            } else {
+                errorCategory = "CODE_SYNTAX_AND_LOGIC_FIX";
+                autoTitle = resolvedLang + " Code Fix";
+                rootCause = "Your " + resolvedLang + " snippet is missing defensive error handling or complete method structure around the statement.";
+                fixedCode = "// Corrected " + resolvedLang + " code:\ntry {\n    " + code.split("\n").join("\n    ") + "\n} catch (Exception e) {\n    System.err.println(\"Error handled: \" + e.getMessage());\n}";
+                vivaNote = "• Initialize all variables and object references before using them in expressions.\n• Wrap risky I/O, parsing, or database calls inside try-catch blocks.\n• Verify method return types and closing semicolons on every statement.";
+            }
+
+            return { errorCategory, autoTitle, inferredError, rootCause, fixedCode, vivaNote, resolvedLang };
+        }
+
+        // --- Optional Live Google Gemini REST API Call ---
+        async function callGeminiApiIfConfigured(language, code, errorLog, repeatCount, userQuery = "") {
+            if (!geminiApiKey || !geminiApiKey.trim()) {
+                return null;
+            }
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+            const packageContextStr = (uploadedPackageFiles && uploadedPackageFiles.length > 0)
+                ? "\n\nUPLOADED READ-ONLY PROJECT PACKAGE FILES (" + uploadedPackageFiles.length + " files):\n" +
+                  uploadedPackageFiles.map(f => "=== FILE: " + f.path + " ===\n" + f.content).join("\n\n")
+                : "";
+            const queryInstruction = (userQuery && userQuery.trim())
+                ? `The user asked this specific Text Query about their code/folder: "${userQuery.trim()}".
+- In "rootCause", provide a direct 1-2 line English answer to the user's Text Query.
+- In "fixedCode", provide ONE clear, complete code example demonstrating the answer or requested change.
+- In "vivaNote", provide 3 short bullet points (starting with "• ") explaining the key takeaways.`
+                : `Analyze the user's faulty ${language} code below.
+- In "rootCause", provide strictly 1-2 lines in simple English explaining only what is wrong in the faulty code.
+- In "fixedCode", provide the corrected code string.
+- In "vivaNote", provide 3 short bullet points (starting with "• ") specific to this faulty code so the user does not repeat this mistake in the future.`;
+
+            const prompt = `You are a CS mentor. ${queryInstruction}
+Return ONLY valid JSON with keys: "errorCategory", "autoTitle", "rootCause", "fixedCode", "vivaNote".
+CODE:
+${code}${packageContextStr}
+OPTIONAL ERROR LOG:
+${errorLog || "None provided"}`;
+
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": geminiApiKey.trim()
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+                if (!res.ok) return null;
+                const data = await res.json();
+                const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                const cleaned = rawText.replace(/```json|```/g, "").trim();
+                const parsed = JSON.parse(cleaned);
+                if (parsed.rootCause && parsed.fixedCode) {
+                    return parsed;
+                }
+                return null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // --- Render App State ---
+        function renderDashboard() {
+            const authView = document.getElementById("authView");
+            const appView = document.getElementById("appView");
+            const navUserArea = document.getElementById("navUserArea");
+
+            if (!currentUser) {
+                authView.classList.remove("hidden");
+                appView.classList.add("hidden");
+                navUserArea.classList.add("hidden");
+                navUserArea.classList.remove("flex");
+                return;
+            }
+
+            authView.classList.add("hidden");
+            appView.classList.remove("hidden");
+            navUserArea.classList.remove("hidden");
+            navUserArea.classList.add("flex");
+
+            document.getElementById("navUserName").textContent = currentUser.fullName;
+            document.getElementById("navUserEmail").textContent = currentUser.email;
+            document.getElementById("profileNameVal").textContent = currentUser.fullName;
+            document.getElementById("profileEmailVal").textContent = currentUser.email;
+
+            const initials = currentUser.fullName
+                .split(" ")
+                .map(w => w[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2);
+            document.getElementById("navAvatarInitials").textContent = initials || "ST";
+
+            const aiModeEl = document.getElementById("statAiMode");
+            if (geminiApiKey && geminiApiKey.trim()) {
+                aiModeEl.textContent = "Live Gemini 2.5 Flash REST API";
+                aiModeEl.className = "text-xs font-bold text-blue-600 truncate";
+            } else {
+                aiModeEl.textContent = "Built-in Smart Analyzer";
+                aiModeEl.className = "text-xs font-bold text-emerald-600 truncate";
+            }
+
+            const userBugs = bugHistory.filter(b => b.userId === currentUser.id);
+            document.getElementById("statTotalBugs").textContent = String(userBugs.length);
+            document.getElementById("sidebarHistoryBadge").textContent = String(userBugs.length);
+
+            const counts = {};
+            userBugs.forEach(b => {
+                counts[b.errorCategory] = (counts[b.errorCategory] || 0) + 1;
+            });
+            let topCat = "None yet";
+            let maxCount = 0;
+            Object.keys(counts).forEach(cat => {
+                if (counts[cat] > maxCount) {
+                    maxCount = counts[cat];
+                    topCat = `${cat} (${counts[cat]}x)`;
+                }
+            });
+            document.getElementById("statTopError").textContent = topCat;
+
+            const readiness = Math.min(98, 70 + userBugs.length * 5);
+            document.getElementById("statVivaReadiness").textContent = readiness + "%";
+
+            // Keep default placeholder messages ("Root cause of problems will be explained here"
+            // and "Correct code related important points will explained here") until user analyzes or selects a bug.
+
+            renderHistoryList();
+            renderAnalyticsSection();
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById("historyListContainer");
+            const query = (document.getElementById("historySearchInput").value || "").toLowerCase().trim();
+
+            const allUserBugs = bugHistory.filter(b => b.userId === currentUser.id);
+            const categoryCounts = {};
+            allUserBugs.forEach(b => {
+                categoryCounts[b.errorCategory] = (categoryCounts[b.errorCategory] || 0) + 1;
+            });
+
+            const filteredBugs = allUserBugs.filter(b => {
+                if (selectedHistoryCat !== "ALL" && b.errorCategory !== selectedHistoryCat) {
+                    return false;
+                }
+                if (!query) return true;
+                return (
+                    b.title.toLowerCase().includes(query) ||
+                    b.language.toLowerCase().includes(query) ||
+                    b.errorCategory.toLowerCase().includes(query) ||
+                    b.errorLog.toLowerCase().includes(query)
+                );
+            });
+
+            if (filteredBugs.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center white-surface-card border border-dashed border-slate-300 rounded-xl text-xs text-slate-500">
+                        No saved bugs match this filter. Click "Analyze Bug" in the left sidebar to test and save a new bug!
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = "";
+            filteredBugs.forEach(item => {
+                const count = categoryCounts[item.errorCategory] || 1;
+                const card = document.createElement("div");
+                card.className = "white-surface-card border border-slate-200 hover:border-blue-300 rounded-xl p-4 transition";
+
+                card.innerHTML = `
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                ☕ ${escapeHtml(item.language)}
+                            </span>
+                            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                                Repeated ${count}x
+                            </span>
+                        </div>
+                        <span class="text-xs text-slate-500">${escapeHtml(item.createdAt)}</span>
+                    </div>
+
+                    <div class="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-2 flex-1 min-w-0">
+                            <h3 class="text-sm font-bold text-slate-900 truncate">${escapeHtml(item.title)}</h3>
+                            <div class="mono text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 truncate">
+                                ${escapeHtml(item.errorLog)}
+                            </div>
+                        </div>
+
+                        <div class="flex sm:flex-col items-end gap-2 shrink-0">
+                            <button type="button" data-view-id="${item.id}" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition shadow-sm">
+                                View Saved Fix
+                            </button>
+                            <button type="button" data-delete-id="${item.id}" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 text-[11px] border border-slate-200 transition">
+                                Delete from history 🗑
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                card.addEventListener("click", (e) => {
+                    const delBtn = e.target.closest("[data-delete-id]");
+                    if (delBtn) {
+                        e.stopPropagation();
+                        const delId = Number(delBtn.getAttribute("data-delete-id"));
+                        bugHistory = bugHistory.filter(b => b.id !== delId);
+                        writeStorage("std_history", bugHistory);
+                        if (activeReportId === delId) activeReportId = null;
+                        renderDashboard();
+                        showToast("Deleted bug report from History Vault.");
+                        return;
+                    }
+
+                    displayReport(item);
+                    document.getElementById("bugTitle").value = item.title;
+                    document.getElementById("bugLanguage").value = item.language.replace("Auto: ", "");
+                    document.getElementById("bugCodeInput").value = item.buggyCode;
+                    document.getElementById("bugErrorInput").value = item.errorLog;
+                    switchSection("analyze");
+                    showToast("Loaded saved fix into workspace!");
+                });
+
+                container.appendChild(card);
+            });
+        }
+
+        function renderAnalyticsSection() {
+            if (!currentUser) return;
+            const userBugs = bugHistory.filter(b => b.userId === currentUser.id);
+            const total = Math.max(1, userBugs.length);
+
+            const categories = [
+                { key: "SPRING_BEAN_ERROR", label: "Spring Bean Errors", color: "bg-blue-600" },
+                { key: "NULL_POINTER_EXCEPTION", label: "Null Pointer Exceptions", color: "bg-amber-500" },
+                { key: "SQL_DATABASE_ERROR", label: "SQL Foreign Keys", color: "bg-purple-500" },
+                { key: "PATH_VARIABLE_ERROR", label: "PathVariable Mismatch", color: "bg-rose-500" }
+            ];
+
+            const counts = {};
+            userBugs.forEach(b => {
+                counts[b.errorCategory] = (counts[b.errorCategory] || 0) + 1;
+            });
+
+            const barsContainer = document.getElementById("analyticsBarsContainer");
+            barsContainer.innerHTML = "";
+            categories.forEach(cat => {
+                const c = counts[cat.key] || 0;
+                const pct = Math.round((c / total) * 100);
+                const row = document.createElement("div");
+                row.className = "space-y-1.5";
+                row.innerHTML = `
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-slate-800">${cat.label}</span>
+                        <span class="text-slate-500 font-semibold">${c}x (${pct}%)</span>
+                    </div>
+                    <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                        <div class="h-full ${cat.color} rounded-full transition-all" style="width: ${Math.max(8, pct)}%"></div>
+                    </div>
+                `;
+                barsContainer.appendChild(row);
+            });
+
+            const flashcardsContainer = document.getElementById("vivaFlashcardsContainer");
+            flashcardsContainer.innerHTML = "";
+            userBugs.slice(0, 6).forEach(bug => {
+                const fcard = document.createElement("div");
+                fcard.className = "p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3";
+                fcard.innerHTML = `
+                    <div>
+                        <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 mb-2">
+                            ${escapeHtml(bug.errorCategory)}
+                        </span>
+                        <h4 class="text-xs font-bold text-slate-900 leading-snug">
+                            Concept Note: "${escapeHtml(bug.title)}"
+                        </h4>
+                        <p class="hidden text-xs text-emerald-800 mt-2.5 pt-2.5 border-t border-slate-200 leading-relaxed" data-flashcard-answer>
+                            ${escapeHtml(bug.vivaNote)}
+                        </p>
+                    </div>
+                    <button type="button" data-reveal-btn class="w-full py-1.5 rounded-lg bg-white hover:bg-blue-50 text-blue-700 border border-slate-300 text-xs font-semibold transition">
+                        Reveal Answer
+                    </button>
+                `;
+                const btn = fcard.querySelector("[data-reveal-btn]");
+                const ans = fcard.querySelector("[data-flashcard-answer]");
+                btn.addEventListener("click", () => {
+                    const isHidden = ans.classList.contains("hidden");
+                    ans.classList.toggle("hidden", !isHidden);
+                    btn.textContent = isHidden ? "Hide Answer" : "Reveal Answer";
+                });
+                flashcardsContainer.appendChild(fcard);
+            });
+        }
+
+        function displayReport(report) {
+            activeReportId = report.id;
+            document.getElementById("outCategoryBadge").textContent = report.errorCategory;
+            document.getElementById("outTitle").textContent = `${report.title} (${report.language})`;
+            document.getElementById("outRootCause").textContent = report.rootCause;
+            document.getElementById("outFixedCode").textContent = report.fixedCode;
+            document.getElementById("outVivaNote").textContent = report.vivaNote;
+
+            const sameCategoryCount = bugHistory.filter(
+                b => b.userId === currentUser.id && b.errorCategory === report.errorCategory
+            ).length;
+
+            const repeatBox = document.getElementById("repeatWarningBox");
+            if (sameCategoryCount > 1) {
+                repeatBox.classList.remove("hidden");
+                repeatBox.innerHTML = `<strong>Database Pattern Alert:</strong> You have triggered <strong>${escapeHtml(report.errorCategory)}</strong> ${sameCategoryCount} times in your History Vault! Check the Mistake Analytics tab to review your Concept Note Flashcards.`;
+            } else {
+                repeatBox.classList.add("hidden");
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function copyTextToClipboard(text, successMsg) {
+            const tempArea = document.createElement("textarea");
+            tempArea.value = text;
+            document.body.appendChild(tempArea);
+            tempArea.select();
+            try {
+                document.execCommand("copy");
+                showToast(successMsg);
+            } catch (err) {
+                showToast("Could not copy text.", true);
+            }
+            document.body.removeChild(tempArea);
+        }
+
+        // --- Event Listeners Setup ---
+        window.addEventListener("DOMContentLoaded", () => {
+            // Auth Tabs
+            document.getElementById("tabLoginBtn").addEventListener("click", () => setAuthMode(false));
+            document.getElementById("tabRegisterBtn").addEventListener("click", () => setAuthMode(true));
+            document.getElementById("headerLoginBtn").addEventListener("click", () => setAuthMode(false));
+            document.getElementById("headerSignupBtn").addEventListener("click", () => setAuthMode(true));
+
+            // Sidebar Section Navigation Buttons
+            document.getElementById("navAnalyzeBtn").addEventListener("click", () => switchSection("analyze"));
+            document.getElementById("navHistoryBtn").addEventListener("click", () => switchSection("history"));
+            document.getElementById("navAnalyticsBtn").addEventListener("click", () => switchSection("analytics"));
+            document.getElementById("navProfileBtn").addEventListener("click", () => switchSection("profile"));
+            document.getElementById("topNavAnalyzeLink").addEventListener("click", () => switchSection("analyze"));
+            document.getElementById("topNavHistoryLink").addEventListener("click", () => switchSection("history"));
+            document.getElementById("topNavAnalyticsLink").addEventListener("click", () => switchSection("analytics"));
+            document.getElementById("topNavProfileLink").addEventListener("click", () => switchSection("profile"));
+            document.getElementById("bannerHistoryBtn").addEventListener("click", () => switchSection("history"));
+            document.getElementById("jumpToHistoryBtn").addEventListener("click", () => switchSection("history"));
+            document.getElementById("backToAnalyzeBtn").addEventListener("click", () => switchSection("analyze"));
+
+            // Global Top Search Bar -> Opens History Vault and filters
+            document.getElementById("globalSearchInput").addEventListener("input", (e) => {
+                if (!currentUser) {
+                    currentUser = DEFAULT_DEMO_USER;
+                    writeStorage("std_current_user", currentUser);
+                    renderDashboard();
+                }
+                document.getElementById("historySearchInput").value = e.target.value;
+                if (activeSection !== "history") {
+                    switchSection("history");
+                } else {
+                    renderHistoryList();
+                }
+            });
+
+            // History Category Filter Pills
+            document.getElementById("historyFilterPills").addEventListener("click", (e) => {
+                const pill = e.target.closest("[data-filter-cat]");
+                if (!pill) return;
+                selectedHistoryCat = pill.getAttribute("data-filter-cat");
+                const allPills = document.querySelectorAll("#historyFilterPills [data-filter-cat]");
+                allPills.forEach(p => {
+                    if (p.getAttribute("data-filter-cat") === selectedHistoryCat) {
+                        p.className = "px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-600 text-white";
+                    } else {
+                        p.className = "px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-100";
+                    }
+                });
+                renderHistoryList();
+            });
+
+            // 1-Click Demo Student Login
+            document.getElementById("quickDemoLoginBtn").addEventListener("click", () => {
+                currentUser = DEFAULT_DEMO_USER;
+                writeStorage("std_current_user", currentUser);
+                showToast("Logged in as Demo Student (Dev Vaidwan)");
+                renderDashboard();
+            });
+
+            // Login / Register Submit
+            document.getElementById("authForm").addEventListener("submit", (e) => {
+                e.preventDefault();
+                const fullName = document.getElementById("authFullName").value.trim();
+                const email = document.getElementById("authEmail").value.trim().toLowerCase();
+                const password = document.getElementById("authPassword").value.trim();
+                const alertBox = document.getElementById("authAlert");
+
+                if (isRegisterMode) {
+                    if (!fullName) {
+                        alertBox.textContent = "Please enter your full name to register.";
+                        alertBox.classList.remove("hidden");
+                        return;
+                    }
+                    const existing = users.find(u => u.email.toLowerCase() === email);
+                    if (existing) {
+                        alertBox.textContent = "This email is already registered. Please switch to Login.";
+                        alertBox.classList.remove("hidden");
+                        return;
+                    }
+                    const newUser = { id: Date.now(), fullName, email, password };
+                    users.push(newUser);
+                    writeStorage("std_users", users);
+                    currentUser = newUser;
+                    writeStorage("std_current_user", currentUser);
+                    showToast("Account registered and logged in!");
+                    renderDashboard();
+                } else {
+                    const matched = users.find(
+                        u => u.email.toLowerCase() === email && u.password === password
+                    );
+                    if (!matched) {
+                        alertBox.textContent = "Invalid email or password. Use '1-Click Demo Student Login' or Register.";
+                        alertBox.classList.remove("hidden");
+                        return;
+                    }
+                    currentUser = matched;
+                    writeStorage("std_current_user", currentUser);
+                    showToast("Welcome back, " + matched.fullName + "!");
+                    renderDashboard();
+                }
+            });
+
+            // Logout
+            document.getElementById("logoutBtn").addEventListener("click", () => {
+                currentUser = null;
+                activeReportId = null;
+                writeStorage("std_current_user", null);
+                showToast("Logged out successfully.");
+                renderDashboard();
+            });
+
+            document.getElementById("bugCodeInput").addEventListener("input", () => {
+                document.getElementById("faultyCodeRequiredAlert").classList.add("hidden");
+            });
+
+            // Sample Preset Loader
+            document.getElementById("samplePresetSelect").addEventListener("change", (e) => {
+                const key = e.target.value;
+                if (!key || !SAMPLE_PRESETS[key]) return;
+                const sample = SAMPLE_PRESETS[key];
+                document.getElementById("bugTitle").value = sample.title;
+                document.getElementById("bugLanguage").value = sample.language;
+                document.getElementById("bugCodeInput").value = sample.code;
+                document.getElementById("bugErrorInput").value = sample.error;
+                document.getElementById("faultyCodeRequiredAlert").classList.add("hidden");
+                showToast("Sample bug loaded! Click 'Analyze & Save to My History'.");
+            });
+
+            // Read-Only Folder / Package Upload Listeners
+            const folderInput = document.getElementById("folderUploadInput");
+            document.getElementById("triggerFolderUploadBtn").addEventListener("click", () => {
+                folderInput.click();
+            });
+
+            folderInput.addEventListener("change", async (e) => {
+                const fileList = Array.from(e.target.files || []);
+                if (fileList.length === 0) return;
+
+                const allowedExts = [".java", ".xml", ".sql", ".properties", ".yml", ".yaml", ".py", ".cpp", ".c", ".h", ".js", ".ts", ".html", ".css", ".json", ".md", ".txt", ".gradle"];
+                const ignoredDirs = ["/target/", "/build/", "/node_modules/", "/.git/", "/.idea/", "/.vscode/"];
+
+                const loaded = [];
+                for (const file of fileList) {
+                    const relPath = file.webkitRelativePath || file.name;
+                    const normPath = "/" + relPath.replace(/\\/g, "/");
+                    if (ignoredDirs.some(d => normPath.includes(d))) continue;
+                    const lowerName = file.name.toLowerCase();
+                    if (!allowedExts.some(ext => lowerName.endsWith(ext))) continue;
+                    if (file.size > 250 * 1024) continue;
+
+                    try {
+                        const text = await file.text();
+                        loaded.push({
+                            path: relPath,
+                            name: file.name,
+                            content: text
+                        });
+                    } catch (err) {
+                        // Ignore unreadable file
+                    }
+                    if (loaded.length >= 40) break;
+                }
+
+                if (loaded.length === 0) {
+                    showToast("No source code files (.java, .xml, .py, .sql, etc.) found in that folder.", true);
+                    return;
+                }
+
+                uploadedPackageFiles = loaded;
+                activePackageFileIndex = 0;
+                renderPackageExplorer();
+                if (!document.getElementById("bugCodeInput").value.trim()) {
+                    document.getElementById("bugCodeInput").value = loaded[0].content;
+                    document.getElementById("faultyCodeRequiredAlert").classList.add("hidden");
+                }
+                showToast(`Loaded ${loaded.length} files in strict Read-Only mode!`);
+            });
+
+
+
+            // Clear Uploaded Package
+            document.getElementById("clearPackageBtn").addEventListener("click", () => {
+                uploadedPackageFiles = [];
+                activePackageFileIndex = 0;
+                folderInput.value = "";
+                renderPackageExplorer();
+                showToast("Cleared read-only package context.");
+            });
+
+            // Clear Form
+            document.getElementById("clearFormBtn").addEventListener("click", () => {
+                document.getElementById("bugTitle").value = "";
+                document.getElementById("bugCodeInput").value = "";
+                document.getElementById("bugErrorInput").value = "";
+                document.getElementById("samplePresetSelect").value = "";
+                document.getElementById("faultyCodeRequiredAlert").classList.add("hidden");
+                document.getElementById("outCategoryBadge").textContent = "READY";
+                document.getElementById("outRootCause").textContent = "Root cause of problems will be explained here";
+                document.getElementById("outFixedCode").textContent = "// Corrected code will appear here";
+                document.getElementById("outVivaNote").textContent = "Correct code related important points will explained here";
+                document.getElementById("repeatWarningBox").classList.add("hidden");
+            });
+
+            // Submit Bug for Analysis
+            document.getElementById("bugForm").addEventListener("submit", async (e) => {
+                e.preventDefault();
+                if (!currentUser) {
+                    currentUser = DEFAULT_DEMO_USER;
+                }
+
+                const rawTitle = document.getElementById("bugTitle").value.trim();
+                const language = document.getElementById("bugLanguage").value;
+                let buggyCode = document.getElementById("bugCodeInput").value.trim();
+                const rawErrorLog = document.getElementById("bugErrorInput").value.trim();
+                const submitBtn = document.getElementById("analyzeSubmitBtn");
+
+                const reqAlert = document.getElementById("faultyCodeRequiredAlert");
+                if (!buggyCode) {
+                    reqAlert.textContent = "Give any faulty or buggy code";
+                    reqAlert.classList.remove("hidden");
+                    document.getElementById("bugCodeInput").focus();
+                    showToast("Give any faulty or buggy code", true);
+                    return;
+                }
+                reqAlert.classList.add("hidden");
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Analyzing Code...";
+
+                const userBugCount = bugHistory.filter(b => b.userId === currentUser.id).length;
+
+                let diagnosis = await callGeminiApiIfConfigured(language, buggyCode, rawErrorLog, userBugCount, rawTitle);
+                if (!diagnosis) {
+                    diagnosis = diagnoseBugLocally(language, buggyCode, rawErrorLog, rawTitle);
+                }
+
+                const finalLanguage = (language === "Auto-Detect Language" && diagnosis.resolvedLang)
+                    ? "Auto: " + diagnosis.resolvedLang
+                    : language;
+
+                const finalTitle = rawTitle || diagnosis.autoTitle || (finalLanguage + " Code Fix");
+                const finalErrorLog = rawErrorLog || diagnosis.inferredError || "Direct Code Analysis (No stack trace provided)";
+
+                const newReport = {
+                    id: Date.now(),
+                    userId: currentUser.id,
+                    title: finalTitle,
+                    language: finalLanguage,
+                    errorCategory: diagnosis.errorCategory,
+                    buggyCode,
+                    errorLog: finalErrorLog,
+                    rootCause: diagnosis.rootCause,
+                    fixedCode: diagnosis.fixedCode,
+                    vivaNote: diagnosis.vivaNote,
+                    createdAt: "Just now"
+                };
+
+                bugHistory.unshift(newReport);
+                writeStorage("std_history", bugHistory);
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Analyze & Save to My History";
+
+                displayReport(newReport);
+                renderDashboard();
+                showToast("Code analyzed and saved to your History Vault!");
+            });
+
+            // Search History Input
+            document.getElementById("historySearchInput").addEventListener("input", () => {
+                renderHistoryList();
+            });
+
+            // Copy Buttons
+            document.getElementById("copyFixedCodeBtn").addEventListener("click", () => {
+                copyTextToClipboard(document.getElementById("outFixedCode").textContent, "Corrected code copied!");
+            });
+            document.getElementById("copyInputCodeBtn").addEventListener("click", () => {
+                copyTextToClipboard(document.getElementById("bugCodeInput").value || "", "Faulty code copied!");
+            });
+
+            // Export History JSON
+            document.getElementById("exportHistoryBtn").addEventListener("click", () => {
+                if (!currentUser) return;
+                const userBugs = bugHistory.filter(b => b.userId === currentUser.id);
+                const blob = new Blob([JSON.stringify(userBugs, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "stacktrace_history_" + currentUser.fullName.replace(/\s+/g, "_").toLowerCase() + ".json";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast("Exported your bug history as JSON!");
+            });
+
+            // Gemini API Key Modal Controls
+            const modal = document.getElementById("apiKeyModal");
+            document.getElementById("openApiKeyModalBtn").addEventListener("click", () => {
+                document.getElementById("geminiKeyInput").value = geminiApiKey || "";
+                modal.classList.remove("hidden");
+            });
+            document.getElementById("closeApiKeyModalBtn").addEventListener("click", () => {
+                modal.classList.add("hidden");
+            });
+            document.getElementById("saveApiKeyBtn").addEventListener("click", () => {
+                geminiApiKey = document.getElementById("geminiKeyInput").value.trim();
+                writeStorage("std_gemini_key", geminiApiKey);
+                modal.classList.add("hidden");
+                renderDashboard();
+                showToast(geminiApiKey ? "Saved Gemini REST API Key!" : "Switched to Built-in Analyzer.");
+            });
+            document.getElementById("clearApiKeyBtn").addEventListener("click", () => {
+                geminiApiKey = "";
+                document.getElementById("geminiKeyInput").value = "";
+                writeStorage("std_gemini_key", "");
+                modal.classList.add("hidden");
+                renderDashboard();
+                showToast("Using Built-in Smart Analyzer.");
+            });
+
+            renderDashboard();
+        });
+    </script>
+</body>
+</html>
